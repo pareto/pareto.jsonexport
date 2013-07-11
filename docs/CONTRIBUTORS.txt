@@ -1,0 +1,5 @@
+Contributors
+============
+
+All code is written and maintained by Guido Wesdorp for Pareto
+(mailto:guido.wesdorp@pareto.nl).
