@@ -24,9 +24,9 @@ The product contains the following modules:
     a simple registry (non-Zope object) to hold the mapping from class to
     exporter, so it's used to remember exporter code for Zope/Plone objects
 
-  * exporters
+  * serializers
 
-    a set of exporter classes (and a base class)
+    a set of JSON serializer classes (and base classes)
 
   * service
 
