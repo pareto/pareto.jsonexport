@@ -4,7 +4,7 @@ import os
 version = '0.4'
 
 long_description = (
-    open('pareto/jsonexport/README.txt').read()
+    open('README.txt').read()
     + '\n' +
     'Contributors\n'
     '============\n'

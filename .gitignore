@@ -1,0 +1,4 @@
+*.pyc
+Paste*
+pareto.jsonexport.egg-info
+dist
