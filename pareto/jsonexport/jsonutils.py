@@ -36,3 +36,6 @@ class JSONEncoder(json.JSONEncoder):
             if isinstance(obj, cls):
                 return serializer(obj)
         return json.JSONEncoder.default(self, obj)
+
+def to_json(data):
+    return json.dumps(data, cls=JSONEncoder)

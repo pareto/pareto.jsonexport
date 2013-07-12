@@ -5,16 +5,28 @@ import time
 
 from interfaces import ISerializer
 
+import jsonutils
+
 
 class service(object):
+    """ provide the core services, serialization and HTTP interaction
+
+        this is basically the glue code of the application, where the
+        components come together
+    """
+    # move to some pluggable config mechanism (with optional ZMI/Plone
+    # management something)
     url = ''
+    username = None
+    password = None
     maxtries = 3
     threaded = False
 
     @classmethod
-    def render(cls, instance, recursive=False):
+    def render(self, instance, recursive=False):
         serializer = ISerializer(instance)
-        return serializer.serialize(recursive=recursive)
+        data = serializer.to_dict(recursive=recursive)
+        return jsonutils.to_json(data)
 
     @classmethod
     def handle_event(cls, _type, instance):
@@ -41,16 +53,18 @@ class service(object):
             'path': '/'.join(instance.getPhysicalPath()),
         }
         if _type != 'delete':
-            data['data'] = cls.render(instance)
+            serializer = ISerializer(instance)
+            instancedata = serializer.to_dict()
+            data['data'] = instancedata
         return data
 
     @classmethod
     def push_event(cls, data):
         """ add a line to the event log and send the data to the remote service
         """
-        jsondata = json.dumps(data)
+        # XXX add Zope logging
         for i in range(cls.maxtries):
-            status = cls.post_data(jsondata)
+            status = cls.post_data(data)
             if status in (200, 201, 204):
                 break
 
@@ -67,6 +81,22 @@ class service(object):
                 fcntl.flock(fd, fcntl.LOCK_UN)
         finally:
             os.close(fd)
+
+    @classmethod
+    def post_data(self, data):
+        jsondata = jsonutils.to_json(data)
+        request = urllib2.Request(self.url)
+        request.add_header('Content-Type', 'application/json')
+        if self.username:
+            creds = base64.standard_b64encode(
+                '%s:%s' % (self.username, self.password))
+            request.add_header('Authorization', 'Basic: %s' % (creds,))
+        try:
+            result = urllib2.urlopen(request)
+        except (urllib2.HttpError, socket.Error):
+            return -1
+        else:
+            return result.status
 
 
 # actual Zope event handler dispatcher to the service's event dispatcher (not

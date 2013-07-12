@@ -24,7 +24,7 @@ class TestCase(unittest.TestCase):
         if isinstance(one, dict) and isinstance(other, dict):
             if sorted(one.keys()) != sorted(other.keys()):
                 raise AssertionError(
-                    'keys of dicts do not match! (%r, %r)' % (
+                    'keys of dicts do not match (%r, %r)' % (
                         sorted(one.keys()), sorted(other.keys())))
             for key in one:
                 try:
@@ -79,7 +79,7 @@ class SerializersTestCase(TestCase):
 
     def test_non_archetypes_folder(self):
         serializer = ISerializer(self.folder1)
-        results = serializer._to_dict()
+        results = serializer.to_dict()
         self.assertEquals(
             results, {
                 'id': 'folder1',
@@ -88,7 +88,7 @@ class SerializersTestCase(TestCase):
 
     def test_archetypes_folder(self):
         serializer = ISerializer(self.folder2)
-        results = serializer._to_dict()
+        results = serializer.to_dict()
         self.assertEquals(
             results,
             dict(sorted({
@@ -104,7 +104,7 @@ class SerializersTestCase(TestCase):
 
     def test_archetypes_document(self):
         serializer = ISerializer(self.document1)
-        results = dict(sorted(serializer._to_dict().items()))
+        results = dict(sorted(serializer.to_dict().items()))
         self.assertEquals(
             results,
             dict(sorted({
@@ -118,52 +118,26 @@ class SerializersTestCase(TestCase):
                 'creators': ('test_user_1_',),
                 'contributors': ()}.items())))
 
-        # test json serialization (since there's some DateTime objects in
-        # there that don't serialize by default)
-        result = serializer.serialize()
-        self.assertEquals(
-            json.loads(result), {
-                'id': 'document1',
-                'title': 'Document 1',
-                'description': '<p>Description.</p>',
-                'text': '',
-                'subject': [],
-                'creation_date': self.document1.creation_date.strftime(
-                    '%Y%m%d-%H%M%S'),
-                'modification_date': self.document1.modification_date.strftime(
-                    '%Y%m%d-%H%M%S'),
-                'creators': ['test_user_1_'],
-                'contributors': []})
-
     def test_archetypes_newsitem(self):
         serializer = ISerializer(self.newsitem1)
-        jsonresult = serializer.serialize()
-        result = json.loads(jsonresult)
-        result['image'] = json.loads(result['image'])
+        result = serializer.to_dict()
         self.assertEquals(
             result, {
                 'id': 'newsitem1',
                 'title': 'News Item 1',
                 'description': '<p>Description.</p>',
                 'text': '',
-                'subject': [],
-                'creation_date': self.newsitem1.creation_date.strftime(
-                    '%Y%m%d-%H%M%S'),
-                'modification_date': self.newsitem1.modification_date.strftime(
-                    '%Y%m%d-%H%M%S'),
-                'image': {
-                    'width': 2,
-                    'height': 2,
-                    'size': 79,
-                    'alt': 'News Item 1',
-                },
+                'subject': (),
+                'creation_date': self.newsitem1.creation_date,
+                'modification_date': self.newsitem1.modification_date,
+                'image': self.newsitem1.getImage(),
                 'imageCaption': 'Image Caption 1',
-                'creators': ['test_user_1_'],
-                'contributors': []})
+                'creators': ('test_user_1_',),
+                'contributors': ()})
 
     def test_recursion(self):
         serializer = ISerializer(self.folder2)
-        data = serializer._to_dict(recursive=True)
+        data = serializer.to_dict(recursive=True)
         self.assertEquals(len(data['_children']), 2)
         self.assertEquals(data['_children'][0]['id'], 'document1')
         self.assertEquals(data['_children'][1]['id'], 'newsitem1')
@@ -198,14 +172,17 @@ class ServiceTestCase(TestCase):
     def tearDown(self):
         pass
 
-    def testRender(self):
-        jsonresult = service.service.render(self.document1)
-        ret = json.loads(jsonresult)
-        self.assertEquals(ret['id'], 'document1')
-
     def testDataForEvent(self):
         data = service.service.data_for_event('create', self.document1)
         self.assertEquals(len(data.keys()), 3)
         self.assertEquals(data['type'], 'create')
         self.assertEquals(data['path'], '/plone/folder2/document1')
+        self.assertEquals(data['data']['id'], 'document1')
 
+        data = service.service.data_for_event('delete', self.document1)
+        self.assertEquals(
+            data, {'path': '/plone/folder2/document1', 'type': 'delete'})
+
+        self.assertRaises(
+            Exception, service.service.data_for_event, 'foobar',
+            self.document1)

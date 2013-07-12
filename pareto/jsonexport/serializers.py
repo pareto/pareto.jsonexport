@@ -1,12 +1,6 @@
-try:
-    import json
-except ImportError:
-    import simplejson as json
-
 from zope import interface
 
 import interfaces
-import jsonutils
 
 
 # base classes
@@ -37,11 +31,7 @@ class Serializer(object):
     def __init__(self, instance):
         self.instance = instance
 
-    def serialize(self, recursive=False):
-        return json.dumps(
-            self._to_dict(recursive=recursive), cls=jsonutils.JSONEncoder)
-
-    def _to_dict(self, recursive=False):
+    def to_dict(self, recursive=False):
         # we find all of our own methods which are decorated using
         # serializerFor, then we know about the JSON key and know we can call
         # that method for the JSON value
@@ -68,7 +58,7 @@ class Serializer(object):
                     except KeyError:
                         children_data.append({'id': childid})
                         continue
-                    children_data.append(serializer._to_dict(recursive=True))
+                    children_data.append(serializer.to_dict(recursive=True))
                 ret['_children'] = children_data
         return ret
 
@@ -93,8 +83,8 @@ class ATSerializer(Serializer):
         return self.instance.schema.get('description').getEditAccessor(
             self.instance)()
 
-    def _to_dict(self, *args, **kwargs):
-        ret = super(ATSerializer, self)._to_dict(*args, **kwargs)
+    def to_dict(self, *args, **kwargs):
+        ret = super(ATSerializer, self).to_dict(*args, **kwargs)
         for fieldId in self.ATFieldIds:
             value = self._get_from_schema(fieldId)
             ret[fieldId] = value
@@ -110,7 +100,7 @@ class EmptySerializer(Serializer):
     
         used as catch-all by default
     """
-    def _to_dict(self, recursive=False):
+    def to_dict(self, recursive=False):
         return {
             'error':
                 'No serializer found for object %s' % (
