@@ -12,9 +12,9 @@ from zope.configuration import xmlconfig
 from plone.app.testing import PLONE_INTEGRATION_TESTING
 from Products.CMFPlone.utils import _createObjectByType
 
-import serializers
-import service
-from interfaces import ISerializer
+from .. import serializers
+from .. import service
+from ..interfaces import ISerializer
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -55,7 +55,6 @@ class SerializersLayer(PloneSandboxLayer):
     def setUpZope(self, app, configurationContext):
         import pareto.jsonexport
         self.loadZCML('serializers.zcml', package=pareto.jsonexport)
-        z2.installProduct(pareto.jsonexport, 'pareto.jsonexport')
 
 
 class SerializersTestCase(TestCase):
