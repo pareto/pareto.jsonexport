@@ -1,0 +1,24 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:security="http://namespaces.zope.org/security"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:cmf="http://namespaces.zope.org/cmf"
+    i18n_domain="knmp.siam">
+
+    <!-- XXX there are many more events we should listen to! see http://developer.plone.org/components/events.html -->
+    <subscriber
+        for="Products.Archetypes.interfaces.IObjectInitializedEvent"
+        handler=".service.create_handler" />
+
+    <subscriber
+        for="Products.Archetypes.interfaces.IObjectEditedEvent"
+        handler=".service.update_handler" />
+
+    <subscriber
+        for="zope.app.container.interfaces.IObjectRemovedEvent"
+        handler=".service.delete_handler" />
+
+</configure>
+

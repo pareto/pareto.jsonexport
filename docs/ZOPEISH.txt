@@ -1,0 +1,35 @@
+About the Zope-ish-ness of this product
+=======================================
+
+This product currently doesn't drink the Zope/Plone kool-aid much. This is
+mostly because I'm both not too comfortable with Zope/Plone's current rather
+mysterious ways (I was a Zope developer from around 2002 until 2006, and then
+left the product for quite a while to come back earlier this year) and because
+I think a lot of those ways are archaic, useless and/or overkill. However,
+there are certainly opportunities to make this product more
+Zope/Plone-friendly and depending on your use-cases these may make your life
+easier. This document discusses a few, mostly for the developers to discuss
+if we may use them for future improvements, but also so that you (the outsider)
+know what the possibilities are, can respond and perhaps even contribute.
+
+Interfaces
+----------
+
+Currently the product uses some ad-hoc registry to register JSON-serializer
+to Zope objects. I'm pretty sure something fancy can be done using ZCML and
+interfaces... Too abstract for me (the ad-hoc way is much easier to read,
+especially for non-Zopistas), but may certainly be considered an improvement.
+
+Service as a Zope object
+------------------------
+
+The 'service' that glues things together could be turned into a Zope object
+entirely, rather than just exposing some views, which would make it more
+consistent with core Zope/Plone and other extensions. To me, plain Python
+objects are much easier to inspect for debugging (try a 'dir()' on a Zope
+object), easier to test and there's overhead in Zope objects that I don't
+personally see advantages of, but I can imagine people would feel comfortable
+with a 'portal_json_export' or something in their ZMI. I generally feel that
+ZMI-changes are hackish and will in almost any sane situation be done from
+the file-system (profile XML for Plone, for instance), but YMMV and you may
+like more configuration options, etc. the Zope way...

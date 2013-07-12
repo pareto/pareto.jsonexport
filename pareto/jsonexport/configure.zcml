@@ -1,0 +1,25 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:security="http://namespaces.zope.org/security"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:cmf="http://namespaces.zope.org/cmf"
+    i18n_domain="knmp.siam">
+
+    <five:registerPackage package="." initialize=".initialize" />
+
+    <include package=".browser" />
+
+    <!-- events.zcml and serializers.zcml should be included from the
+            main project to avoid accidental pushes and JSON exposure,
+            we do register a 'catch all' that returns empty JSON to
+            avoid the views raising an exception -->
+    <adapter
+        factory=".serializers.EmptySerializer"
+        provides=".interfaces.ISerializer"
+        for="*"
+        />
+
+</configure>
+

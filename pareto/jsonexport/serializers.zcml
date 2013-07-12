@@ -1,0 +1,53 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:security="http://namespaces.zope.org/security"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:cmf="http://namespaces.zope.org/cmf"
+    i18n_domain="knmp.siam">
+
+    <adapter
+        factory=".serializers.ItemSerializer"
+        provides=".interfaces.ISerializer"
+        for="*"
+        permission="zope.Public"
+        />
+
+    <adapter
+        factory=".serializers.FolderSerializer"
+        provides=".interfaces.ISerializer"
+        for="OFS.Folder.Folder"
+        permission="zope.Public"
+        />
+
+    <adapter
+        factory=".serializers.ATSerializer"
+        provides=".interfaces.ISerializer"
+        for="Products.ATContentTypes.content.base.ATCTContent"
+        permission="zope.Public"
+        />
+
+    <adapter
+        factory=".serializers.ATFolderSerializer"
+        provides=".interfaces.ISerializer"
+        for="Products.ATContentTypes.content.folder.ATFolder"
+        permission="zope.Public"
+        />
+
+    <adapter
+        factory=".serializers.ATDocumentSerializer"
+        provides=".interfaces.ISerializer"
+        for="Products.ATContentTypes.content.document.ATDocument"
+        permission="zope.Public"
+        />
+
+    <adapter
+        factory=".serializers.ATNewsItemSerializer"
+        provides=".interfaces.ISerializer"
+        for="Products.ATContentTypes.content.newsitem.ATNewsItem"
+        permission="zope.Public"
+        />
+
+</configure>
+
