@@ -19,18 +19,6 @@ from ..interfaces import ISerializer
 here = os.path.abspath(os.path.dirname(__file__))
 
 
-class DummyZopeObject(object):
-    pass
-
-
-class DummyZopeObjectSubClass(DummyZopeObject):
-    pass
-
-
-class DummyZopeObjectSerializer(serializers.Serializer):
-    pass
-
-
 class TestCase(unittest.TestCase):
     def assertEquals(self, one, other):
         if isinstance(one, dict) and isinstance(other, dict):
