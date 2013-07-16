@@ -7,7 +7,9 @@
     xmlns:cmf="http://namespaces.zope.org/cmf"
     i18n_domain="knmp.siam">
 
-    <!-- XXX there are many more events we should listen to! see http://developer.plone.org/components/events.html -->
+    <!-- note that these are Plone-specific! turned out Zope-only events
+            weren't fired consistently (e.g. not when setting a title from
+            the ZMI?!?) so Zope-level support is unfortunately dropped -->
     <subscriber
         for="Products.Archetypes.interfaces.IObjectInitializedEvent"
         handler=".service.create_handler" />
@@ -17,8 +19,19 @@
         handler=".service.update_handler" />
 
     <subscriber
-        for="zope.app.container.interfaces.IObjectRemovedEvent"
+        for="Products.Archetypes.interfaces.IWebDAVObjectEditedEvent"
+        handler=".service.update_handler" />
+
+    <subscriber
+        for="Products.CMFCore.interfaces.IActionSucceededEvent"
+        handler=".service.update_handler" />
+
+    <subscriber
+        for="zope.lifecycleevent.IObjectMovedEvent"
+        handler=".service.move_handler" />
+
+    <subscriber
+        for="zope.lifecycleevent.interfaces.IObjectRemovedEvent"
         handler=".service.delete_handler" />
 
 </configure>
-

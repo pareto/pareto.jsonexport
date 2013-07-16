@@ -2,6 +2,11 @@ import os
 import fcntl
 import datetime
 import time
+import urllib2
+import socket
+import base64
+
+from zope import lifecycleevent
 
 from interfaces import ISerializer
 
@@ -21,9 +26,10 @@ class service(object):
     password = None
     maxtries = 3
     threaded = False
+    logdir = '/tmp/'
 
     @classmethod
-    def render(self, instance, recursive=False):
+    def render(cls, instance, recursive=False):
         serializer = ISerializer(instance)
         data = serializer.to_dict(recursive=recursive)
         return jsonutils.to_json(data)
@@ -31,12 +37,14 @@ class service(object):
     @classmethod
     def handle_event(cls, _type, instance):
         if cls.threaded:
+            import multiprocessing
             process = multiprocessing.Process(
-                target=self._handle_event, args=(_type, instance))
+                target=cls._handle_event, args=(_type, instance))
             process.start()
         else:
-            self._handle_event(_type, instance)
+            cls._handle_event(_type, instance)
 
+    @classmethod
     def _handle_event(cls, _type, instance):
         # XXX add threading/multiprocessing
         assert _type in ('create', 'update', 'delete'), 'unsupported event'
@@ -69,10 +77,10 @@ class service(object):
                 break
 
     @classmethod
-    def log_event(self, timestamp, _type, path):
-        dt = datetime.datetime.from_timestamp(timestamp)
+    def log_event(cls, timestamp, _type, path):
+        dt = datetime.datetime.fromtimestamp(timestamp)
         logfile = os.path.join(cls.logdir, dt.strftime('changes-%Y%m%d.log'))
-        fd = os.fopen(logfile, os.O_WRONLY | os.O_CREAT)
+        fd = os.open(logfile, os.O_WRONLY | os.O_CREAT)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX)
             try:
@@ -83,17 +91,21 @@ class service(object):
             os.close(fd)
 
     @classmethod
-    def post_data(self, data):
+    def post_data(cls, data):
+        if not cls.url:
+            # return no content status to keep the calling code from re-trying
+            return 204
         jsondata = jsonutils.to_json(data)
-        request = urllib2.Request(self.url)
+        request = urllib2.Request(cls.url)
         request.add_header('Content-Type', 'application/json')
-        if self.username:
+        if cls.username:
             creds = base64.standard_b64encode(
-                '%s:%s' % (self.username, self.password))
+                '%s:%s' % (cls.username, cls.password))
             request.add_header('Authorization', 'Basic: %s' % (creds,))
+        request.data = jsondata
         try:
             result = urllib2.urlopen(request)
-        except (urllib2.HttpError, socket.Error):
+        except (urllib2.HTTPError, socket.error):
             return -1
         else:
             return result.status
@@ -106,7 +118,21 @@ def create_handler(event):
     service.handle_event('create', event.object)
 
 def update_handler(event):
+    if hasattr(event, '_handled'):
+        return
+    event._handled = True
+    service.handle_event('update', event.object)
+
+def move_handler(event):
+    if type(event) != lifecycleevent.ObjectMovedEvent:
+        return
+    if hasattr(event, '_handled'):
+        return
+    event._handled = True
     service.handle_event('update', event.object)
 
 def delete_handler(event):
+    if hasattr(event, '_handled'):
+        return
+    event._handled = True
     service.handle_event('delete', event.object)
