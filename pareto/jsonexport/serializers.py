@@ -1,17 +1,20 @@
 from zope import interface
+from OFS.SimpleItem import Item
+
+from Products.Archetypes.Field import ReferenceField
 
 import interfaces
 
 
 # base classes
-def serializerFor(attrId):
+def serializer_for(attrId):
     """ decorator to mark methods as serializers for a single field
 
         requires one argument, attrId, which is used as the key by which
         the serialized value is stored
     """
     def decorator(func):
-        func.serializerFor = attrId
+        func.serializer_for = attrId
         return func
     return decorator
 
@@ -23,7 +26,7 @@ class Serializer(object):
         an object
 
         subclasses should add methods marked with a special decorator
-        'serializerFor' (see above) to the class, those methods are called
+        'serializer_for' (see above) to the class, those methods are called
         for serialization of single fields
     """
     interface.implements(interfaces.ISerializer)
@@ -33,17 +36,21 @@ class Serializer(object):
 
     def to_dict(self, recursive=False):
         # we find all of our own methods which are decorated using
-        # serializerFor, then we know about the JSON key and know we can call
+        # serializer_for, then we know about the JSON key and know we can call
         # that method for the JSON value
-        ret = {}
+        ret = {
+            'type': self.instance.meta_type,
+            'id': self.instance.getId(),
+            'path': '/'.join(self.instance.getPhysicalPath()),
+        }
         for attrName in dir(self):
             if attrName.startswith('_'):
                 continue
             attr = getattr(self, attrName)
             if (not callable(attr) or
-                    not hasattr(attr, 'serializerFor')):
+                    not hasattr(attr, 'serializer_for')):
                 continue
-            key = attr.serializerFor
+            key = attr.serializer_for
             value = attr()
             ret[key] = value
         if recursive:
@@ -56,14 +63,51 @@ class Serializer(object):
                     try:
                         serializer = interfaces.ISerializer(child)
                     except TypeError:
-                        children_data.append({
-                            'type': child.meta_type, # can not assume Plone
-                            'id': childid,
-                        })
+                        children_data.append(
+                            UnknownTypeSerializer(child).to_dict())
                         continue
                     children_data.append(serializer.to_dict(recursive=True))
                 ret['_children'] = children_data
         return ret
+
+
+class ReferenceSerializer(Serializer):
+    """ serialize an object as a reference
+
+        used internally for ReferenceFields, etc.
+    """
+    def to_dict(self, recursive=False):
+        return {
+            'type': 'Reference',
+            'subtype': self.instance.meta_type,
+            'path': '/'.join(self.instance.getPhysicalPath()),
+            'id': self.instance.getId(),
+        }
+
+
+class UnknownTypeSerializer(Serializer):
+    """ serialize an unknown object with a small set of data
+
+        used internally when an object for which there's no serializer
+        registered is encountered as child of a serialized object
+    """
+    def to_dict(self, recursive=False):
+        return {
+            'type': 'UnknownType',
+            'subtype': self.instance.meta_type,
+            'path': '/'.join(self.instance.getPhysicalPath()),
+            'id': self.instance.getId(),
+        }
+
+
+class ContentListingReference(Serializer):
+    def to_dict(self, recursive=False):
+        return {
+            'type': 'Reference',
+            'subtype': self.instance.meta_type,
+            'path': self.instance.getPath(),
+            'id': self.instance.getId(),
+        }
 
 
 class ATSerializer(Serializer):
@@ -80,19 +124,27 @@ class ATSerializer(Serializer):
     skip_fields = (
         'allowDiscussion', 'constrainTypesMode', 'description',
         'excludeFromNav', 'immediatelyAddableTypes', 'locallyAllowedTypes',
-        'nextPreviousEnabled')
+        'nextPreviousEnabled', 'query')
 
-    @serializerFor('description')
+    @serializer_for('description')
     def serializeDescription(self):
         return self.instance.schema.get('description').getEditAccessor(
             self.instance)()
 
     def to_dict(self, *args, **kwargs):
         ret = super(ATSerializer, self).to_dict(*args, **kwargs)
+        ret['portal_type'] = self.instance.portal_type
         for field_id in self.instance.schema.keys():
             if field_id in self.skip_fields:
                 continue
+            field = self.instance.schema[field_id]
             value = self._get_from_schema(field_id)
+            if isinstance(field, ReferenceField):
+                value = [
+                    ReferenceSerializer(item).to_dict() for item in value]
+            elif isinstance(value, Item):
+                serializer = interfaces.ISerializer(value)
+                value = serializer.to_dict(recursive=True)
             ret[field_id] = value
         return ret
 
@@ -104,14 +156,14 @@ class ATSerializer(Serializer):
 class ItemSerializer(Serializer):
     """ the very basics, can be registered as a default handler
     """
-    @serializerFor('id')
+    @serializer_for('id')
     def serialize_id(self):
         _id = self.instance.id
         if callable(_id):
             _id = _id()
         return _id
 
-    @serializerFor('title')
+    @serializer_for('title')
     def serialize_title(self):
         return self.instance.title
 
@@ -123,12 +175,37 @@ class FolderSerializer(ItemSerializer):
         prevent name clashes) value in the dict that contains the ids
         of the folder's children
     """
-    @serializerFor('_children')
+    @serializer_for('_children')
     def serialize_items(self):
         return self.instance.objectIds()
 
 
 class ATFolderSerializer(ATSerializer):
-    @serializerFor('_children')
+    @serializer_for('_children')
     def serialize_items(self):
         return self.instance.objectIds()
+
+
+class CollectionSerializer(ATSerializer):
+    @serializer_for('results')
+    def serialize_items(self):
+        items = self.instance.results(batch=False)
+        return [ContentListingReference(item).to_dict() for item in items]
+
+
+class ImageSerializer(Serializer):
+    @serializer_for('width')
+    def serialize_width(self):
+        return self.instance.width
+
+    @serializer_for('height')
+    def serialize_height(self):
+        return self.instance.height
+
+    @serializer_for('size')
+    def serialize_size(self):
+        return self.instance.size
+
+    @serializer_for('alt')
+    def serialize_alt(self):
+        return self.instance.alt

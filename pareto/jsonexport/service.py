@@ -19,17 +19,11 @@ class service(object):
         this is basically the glue code of the application, where the
         components come together
     """
-    # move to some pluggable config mechanism (with optional ZMI/Plone
-    # management something)
-    url = ''
-    username = None
-    password = None
-    maxtries = 3
-    threaded = False
-    logdir = '/tmp/'
-
     @classmethod
     def render(cls, instance, recursive=False):
         serializer = ISerializer(instance)
         data = serializer.to_dict(recursive=recursive)
-        return jsonutils.to_json(data)
+        _json = jsonutils.to_json(data)
+        #import pprint, json
+        #open('/tmp/json_pretty', 'w').write(pprint.pformat(json.loads(_json)))
+        return _json

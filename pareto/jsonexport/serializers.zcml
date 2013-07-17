@@ -15,6 +15,13 @@
         />
 
     <adapter
+        factory=".serializers.ImageSerializer"
+        provides=".interfaces.ISerializer"
+        for="OFS.Image.Image"
+        permission="zope.Public"
+        />
+
+    <adapter
         factory=".serializers.FolderSerializer"
         provides=".interfaces.ISerializer"
         for="OFS.Folder.Folder"
@@ -32,6 +39,13 @@
         factory=".serializers.ATFolderSerializer"
         provides=".interfaces.ISerializer"
         for="Products.ATContentTypes.content.folder.ATFolder"
+        permission="zope.Public"
+        />
+
+    <adapter
+        factory=".serializers.CollectionSerializer"
+        provides=".interfaces.ISerializer"
+        for="plone.app.collection.collection.Collection"
         permission="zope.Public"
         />
 
