@@ -35,19 +35,5 @@
         permission="zope.Public"
         />
 
-    <adapter
-        factory=".serializers.ATDocumentSerializer"
-        provides=".interfaces.ISerializer"
-        for="Products.ATContentTypes.content.document.ATDocument"
-        permission="zope.Public"
-        />
-
-    <adapter
-        factory=".serializers.ATNewsItemSerializer"
-        provides=".interfaces.ISerializer"
-        for="Products.ATContentTypes.content.newsitem.ATNewsItem"
-        permission="zope.Public"
-        />
-
 </configure>
 

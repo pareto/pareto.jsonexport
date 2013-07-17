@@ -11,11 +11,4 @@
       permission="zope2.Public"
       />
 
-  <browser:page
-      name="test_threading"
-      for="Products.CMFCore.interfaces.ISiteRoot"
-      class=".views.TestThreadingView"
-      permission="zope2.Public"
-      />
-
 </configure>

@@ -55,8 +55,11 @@ class Serializer(object):
                     child = getattr(self.instance, childid)
                     try:
                         serializer = interfaces.ISerializer(child)
-                    except KeyError:
-                        children_data.append({'id': childid})
+                    except TypeError:
+                        children_data.append({
+                            'type': child.meta_type, # can not assume Plone
+                            'id': childid,
+                        })
                         continue
                     children_data.append(serializer.to_dict(recursive=True))
                 ret['_children'] = children_data
@@ -69,14 +72,15 @@ class ATSerializer(Serializer):
         since this provides the base fields of all the AT content types,
         it can be used as concrete default ATCTContent serializer
 
-        on serialization, this looks at a class-attribute called 'ATFieldIds'
-        to find schema fields to serialize (in addition to the default
-        behaviour of looking at marked methods)
+        on serialization, this looks at a class-attribute called 'skip_fields'
+        to find schema fields _not_ to serialize, the rest of the schema
+        fields will be found by looking at the schema (in addition to the
+        default behaviour of looking at marked methods)
     """
-    ATFieldIds = (
-        'id', 'title', 'subject', 'creation_date',
-        'modification_date', 'creators', 'contributors',
-    )
+    skip_fields = (
+        'allowDiscussion', 'constrainTypesMode', 'description',
+        'excludeFromNav', 'immediatelyAddableTypes', 'locallyAllowedTypes',
+        'nextPreviousEnabled')
 
     @serializerFor('description')
     def serializeDescription(self):
@@ -85,9 +89,11 @@ class ATSerializer(Serializer):
 
     def to_dict(self, *args, **kwargs):
         ret = super(ATSerializer, self).to_dict(*args, **kwargs)
-        for fieldId in self.ATFieldIds:
-            value = self._get_from_schema(fieldId)
-            ret[fieldId] = value
+        for field_id in self.instance.schema.keys():
+            if field_id in self.skip_fields:
+                continue
+            value = self._get_from_schema(field_id)
+            ret[field_id] = value
         return ret
 
     def _get_from_schema(self, id):
@@ -95,60 +101,34 @@ class ATSerializer(Serializer):
 
 
 # actual serializer implementations
-class EmptySerializer(Serializer):
-    """ generates an empty dict as JSON result
-    
-        used as catch-all by default
-    """
-    def to_dict(self, recursive=False):
-        return {
-            'error':
-                'No serializer found for object %s' % (
-                    self.instance.__class__,)}
-
-
 class ItemSerializer(Serializer):
     """ the very basics, can be registered as a default handler
     """
     @serializerFor('id')
-    def serializeId(self):
+    def serialize_id(self):
         _id = self.instance.id
         if callable(_id):
             _id = _id()
         return _id
 
     @serializerFor('title')
-    def serializeTitle(self):
+    def serialize_title(self):
         return self.instance.title
 
 
 class FolderSerializer(ItemSerializer):
     """ basic folder serializer
-    
+
         provides an additional '_children' (marked with an underscore to
         prevent name clashes) value in the dict that contains the ids
         of the folder's children
     """
     @serializerFor('_children')
-    def serializeItems(self):
+    def serialize_items(self):
         return self.instance.objectIds()
 
 
 class ATFolderSerializer(ATSerializer):
     @serializerFor('_children')
-    def serializeItems(self):
+    def serialize_items(self):
         return self.instance.objectIds()
-
-
-class ATDocumentSerializer(ATSerializer):
-    ATFieldIds = ATSerializer.ATFieldIds + ('text',)
-
-
-class ATNewsItemSerializer(ATSerializer):
-    ATFieldIds = ATSerializer.ATFieldIds + (
-        'text', 'image', 'imageCaption', 
-    )
-
-
-class ATBlobSerializer(ATSerializer):
-    pass
