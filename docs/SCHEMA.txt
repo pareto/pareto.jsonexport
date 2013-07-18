@@ -1,0 +1,250 @@
+=============================
+JSON export types description
+=============================
+
+About this document
+-------------------
+
+This document describes the types that are in the JSON export of
+zeelandia.nl. Per type, each of the type's attributes are discussed,
+with the value type and, if appropriate, a short description of what
+is stored.
+
+Notes about types
+-----------------
+
+Types 'inherit' from each other, where noted that a type is a subclass of one
+or more other types, all the parent types' attributes are exposed on the
+object, too.
+
+Folder-types have their children stored in an attribute called '_children',
+this contains either references to the children if the serialization was not
+started in 'recursive' mode, or fully serialized types if it was.
+
+Type 'string' is always using a UTF-8 encoding where appropriate (e.g. 'id'
+is always ASCII).
+
+Where a value type is a 'list of types', it can contain any of the described
+types below, where it is 'list of Reference' it only contains Reference type
+objects (which always point to objects that exist elsewhere in the full
+content-tree).
+
+Where a value type is 'string (datetime)', it will have the format
+'YYYYMMDD-HHMMSS', so 4 digits for the year, then 2 digits for the month,
+then 2 digits for the day, then a dash, then 2 digits for hour, minute and
+second, respectively. As an example, juli 18 2013 13:16 will be serialized
+to '20130718-1316'. Time zone is excluded, it is assumed that the server
+time zone (the time zone for the datetimes) is assumed by the applications.
+
+Type descriptions
+-----------------
+
+Type
+====
+
+::
+
+    subclasses from: None
+    abstract, this structure will not actually appear in the JSON
+
+* type: string - object type/meta type
+* path: string - full (internal) path to the root
+* id: string - object id, e.g. used in path
+
+ContentType
+===========
+
+::
+
+    subclasses from: Type
+    abstract, this structure will not actually appear in the JSON
+
+* title: string
+
+UnknownType
+===========
+
+::
+
+    subclasses from: Type
+
+Used when unknown Zope types are encountered, 'type' is always 'UnkownType'.
+
+* subtype: string (object type/meta type of the instance)
+
+Reference
+=========
+
+::
+
+    subclasses from: Type
+
+Used when an attribute (_children, relatedItems) references another object,
+'type' is always 'Reference'.
+
+* subtype: string (object type/meta type of the instance)
+
+Folder
+======
+
+::
+
+    subclasses from: Content
+
+* _children: list of References, or list of types if recursive
+
+Plone Site
+==========
+
+::
+
+    subclasses from: Folder
+
+no additional fields
+
+ATContentType
+=============
+
+::
+
+    subclasses from: ContentType
+    abstract, this structure will not actually appear in the JSON
+
+* contributors: list of strings
+* creation_date: string (datetime)
+* creators: list of strings
+* description: string
+* effectiveDate: string (datetime)
+* expirationDate: string (datetime)
+* language: string
+* location: string
+* modification_date: string (datetime)
+* relatedItems: list of References
+* rights: string
+* subject: list of strings
+
+ATFolder/Folder
+===============
+
+::
+
+    subclasses from: Folder, ATContentType
+
+no additional fields
+
+ATNewsItem/News Item
+====================
+
+::
+
+    subclasses from: ATContentType
+
+* image: ATBlob/Image type
+* imageCaption: string
+* text: string
+
+ATNewsItem/Competency
+=====================
+
+::
+
+    subclasses from: ATNewsItem/News Item
+
+no additional fields
+
+ATNewsItem/Find Us
+==================
+
+::
+
+    subclasses from: ATNewsItem/News Item (?)
+
+no additional fields
+
+ATBlob/File
+===========
+
+::
+
+    subclasses from: ATContentType
+
+no additional fields
+
+ATBlob/Image
+============
+
+::
+
+    subclasses from: ATBlob/File
+
+no additional fields
+
+ATNewsItem/Collection
+=====================
+
+::
+
+    subclasses from: ATNewsItem/News Item
+
+* results: list of References
+
+ATEvent/Event
+=============
+
+::
+
+    subclasses from: ATContentType
+
+* attendees: list
+* contactEmail: string
+* contactName: string
+* contactPhone: string
+* contributors: list
+* endDate: string
+* eventUrl: string
+* startDate: string
+
+ATTopic/Topic
+=============
+
+::
+
+    subclasses from: ATFolder
+
+* itemCount: int (XXX is this useful?)
+
+ATNewsItem/Client Story
+=======================
+
+::
+
+    subclasses from: ATNewsItem/News Item
+
+no additional fields
+
+ATDocument/Home
+===============
+
+::
+
+    subclasses from: ATContentType
+
+no additional fields
+
+ATNewsItem/Document
+===================
+
+::
+
+    subclasses from: ATNewsItem/News Item
+
+no additional fields
+
+ATNewsITem/Innovation Item
+==========================
+
+::
+
+    subclasses from: ATNewsItem/News Item
+
+no additional fields
