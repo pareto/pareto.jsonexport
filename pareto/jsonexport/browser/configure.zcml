@@ -8,7 +8,7 @@
       name="json_export"
       for="*"
       class=".views.JsonView"
-      permission="zope2.Public"
+      permission="cmf.ManagePortal"
       />
 
 </configure>

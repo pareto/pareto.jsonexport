@@ -122,9 +122,12 @@ class ATSerializer(Serializer):
         default behaviour of looking at marked methods)
     """
     skip_fields = (
-        'allowDiscussion', 'constrainTypesMode', 'description',
-        'excludeFromNav', 'immediatelyAddableTypes', 'locallyAllowedTypes',
-        'nextPreviousEnabled', 'query')
+        'allowDiscussion', 'acquireCriteria', 'constrainTypesMode',
+        'customView', 'customViewFields',
+        'description', 'excludeFromNav', 'immediatelyAddableTypes',
+        'limit', 'limitNumber', 'locallyAllowedTypes', 'nextPreviousEnabled',
+        'presentation', 'query', 'sort_on', 'sort_reversed', 'tableContents',
+    )
 
     @serializer_for('description')
     def serializeDescription(self):

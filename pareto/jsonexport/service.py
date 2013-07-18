@@ -24,6 +24,7 @@ class service(object):
         serializer = ISerializer(instance)
         data = serializer.to_dict(recursive=recursive)
         _json = jsonutils.to_json(data)
-        #import pprint, json
-        #open('/tmp/json_pretty', 'w').write(pprint.pformat(json.loads(_json)))
+        import pprint, json
+        open('/tmp/json', 'w').write(_json)
+        open('/tmp/json_pretty', 'w').write(pprint.pformat(json.loads(_json)))
         return _json
