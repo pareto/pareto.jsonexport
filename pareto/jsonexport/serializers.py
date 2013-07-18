@@ -1,5 +1,6 @@
 from zope import interface
 from OFS.SimpleItem import Item
+from Products.CMFCore.utils import getToolByName
 
 from Products.Archetypes.Field import ReferenceField
 
@@ -130,9 +131,20 @@ class ATSerializer(Serializer):
     )
 
     @serializer_for('description')
-    def serializeDescription(self):
+    def serialize_description(self):
         return self.instance.schema.get('description').getEditAccessor(
             self.instance)()
+
+    @serializer_for('state')
+    def serialize_workflow_state(self):
+        wft = getToolByName(self.instance, 'portal_workflow')
+        wfs = wft.getWorkflowsFor(self.instance)
+        assert len(wfs) <= 1, (
+            'Unexpected error: more than one workflow registered for %s' % (
+                self.instance,))
+        if not wfs:
+            return None
+        return wft.getStatusOf(wfs[0].id, self.instance)['review_state']
 
     def to_dict(self, *args, **kwargs):
         ret = super(ATSerializer, self).to_dict(*args, **kwargs)

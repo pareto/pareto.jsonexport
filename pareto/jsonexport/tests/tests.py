@@ -18,6 +18,7 @@ from plone.testing import z2
 from zope.configuration import xmlconfig
 from plone.app.testing import PLONE_INTEGRATION_TESTING
 from Products.CMFPlone.utils import _createObjectByType
+from Products.CMFCore.utils import getToolByName
 
 from .. import serializers
 from .. import service
@@ -88,16 +89,21 @@ class SerializersTestCase(TestCase):
     def setUp(self):
         self.app = self.layer['app']
         self.portal = self.layer['portal']
+        self.workflowTool = wft = getToolByName(
+            self.layer['portal'], 'portal_workflow')
 
         # Zope has good old factory methods to create content
         self.app.manage_addFolder('folder1', title='Folder 1')
         self.folder1 = self.app.folder1
+
+        wft.setChainForPortalTypes(['Folder'], 'folder_workflow')
 
         # Plone does it a little different...
         _createObjectByType(
             'Folder', self.portal, id='folder2', title='Folder 2')
         self.folder2 = self.portal.folder2
         self.folder2.setDescription('<p>Description.</p>')
+        wft.doActionFor(self.folder2, 'publish')
 
         # AT document
         _createObjectByType(
@@ -166,6 +172,7 @@ class SerializersTestCase(TestCase):
                 'contributors': (),
                 'relatedItems': [],
                 'rights': '',
+                'state': 'published',
             }.items())))
 
     def test_archetypes_document(self):
@@ -191,9 +198,8 @@ class SerializersTestCase(TestCase):
                 'creators': ('test_user_1_',),
                 'contributors': (),
                 'relatedItems': [],
-                'tableContents': False,
-                'presentation': False,
                 'rights': '',
+                'state': None,
             }.items())))
 
     def test_archetypes_newsitem(self):
@@ -229,6 +235,7 @@ class SerializersTestCase(TestCase):
                 'contributors': (),
                 'relatedItems': [],
                 'rights': '',
+                'state': None,
             })
 
     def test_recursion(self):
