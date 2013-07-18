@@ -1,4 +1,3 @@
-
 from Products.Five import BrowserView
 
 from ..service import service
