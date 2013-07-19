@@ -9,12 +9,8 @@
 
     <five:registerPackage package="." initialize=".initialize" />
 
+    <include file="profiles.zcml" />
     <include package=".browser" />
-
-    <!-- serializers.zcml should be included from the
-            main project to avoid accidental JSON exposure,
-            we do register a 'catch all' that returns empty JSON to
-            avoid the views raising an exception -->
 
 </configure>
 

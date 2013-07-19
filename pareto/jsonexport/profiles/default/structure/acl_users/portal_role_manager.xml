@@ -1,0 +1,5 @@
+<?xml version="1.0" ?>
+<zodb-roles title="">
+ <role role_id="JSONImporter" title="" description="">
+ </role>
+</zodb-roles>

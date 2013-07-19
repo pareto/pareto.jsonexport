@@ -4,11 +4,15 @@
     xmlns:five="http://namespaces.zope.org/five"
     i18n_domain="pareto.uidfixer">
 
+  <permission
+      id="pareto.jsonexport.ViewJSON"
+      title="pareto.jsonexport: View JSON" />
+
   <browser:page
       name="json_export"
       for="*"
       class=".views.JsonView"
-      permission="cmf.ManagePortal"
+      permission="pareto.jsonexport.ViewJSON"
       />
 
 </configure>

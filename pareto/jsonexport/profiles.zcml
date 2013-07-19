@@ -1,0 +1,14 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    i18n_domain="pareto.jsonexport">
+
+  <genericsetup:registerProfile
+      name="default"
+      title="Pareto JSON export"
+      directory="profiles/default"
+      description="Extension profile for the &quot;pareto.jsonexport&quot; product."
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      />
+
+</configure>
