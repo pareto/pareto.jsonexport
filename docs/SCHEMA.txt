@@ -122,6 +122,7 @@ ATContentType
 * relatedItems: list of References
 * rights: string
 * subject: list of strings
+* state: string ('published', 'private') or None (if not available)
 
 ATFolder/Folder
 ===============
