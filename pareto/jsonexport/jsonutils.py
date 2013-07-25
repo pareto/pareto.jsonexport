@@ -4,7 +4,6 @@ except ImportError:
     import simplejson as json
 import datetime
 from DateTime import DateTime
-from OFS.Image import Image
 
 def datetime_to_json(dt):
     if isinstance(dt, datetime.date):
