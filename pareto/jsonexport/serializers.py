@@ -5,8 +5,10 @@ from Products.CMFCore.utils import getToolByName
 from Products.Archetypes.Field import ReferenceField
 from Products.Archetypes.Widget import RichWidget
 
+from archetypes.schemaextender.extender import instanceSchemaFactory
+
 import interfaces
-from html import html_to_text
+import html
 
 
 # base classes
@@ -151,29 +153,42 @@ class ATSerializer(Serializer):
     def to_dict(self, *args, **kwargs):
         ret = super(ATSerializer, self).to_dict(*args, **kwargs)
         ret['portal_type'] = self.instance.portal_type
-        for field_id in self.instance.schema.keys():
+        schema = instanceSchemaFactory(self.instance)
+        for field_id in schema.keys():
             if field_id in self.skip_fields:
                 continue
-            field = self.instance.schema[field_id]
-            value = self._get_from_schema(field_id)
+            field = schema[field_id]
+            _schema = schema
+            if field_id in self.instance.schema:
+                _schema = self.instance.schema
+            value = self._get_from_schema(field_id, _schema)
             if isinstance(field, ReferenceField):
                 value = [
                     ReferenceSerializer(item).to_dict() for item in value]
             elif isinstance(field.widget, RichWidget):
-                astext = html_to_text(value)
-                return {
+                astext = html.html_to_text(value)
+                urls = html.urls_from_html(value)
+                value = {
                     'type': 'Rich Text',
                     'html': value,
                     'text': astext,
+                    'urls': urls,
                 }
             elif isinstance(value, Item):
                 serializer = interfaces.ISerializer(value)
                 value = serializer.to_dict(recursive=True)
+            elif field_id == 'image' and self.instance.portal_type == 'Image':
+                continue
+            elif field_id == 'leadImage':
+                value = '%s/leadImage' % (self.instance.absolute_url(),)
+            elif hasattr(value, 'blob'):
+                # file or image content, ignore
+                continue
             ret[field_id] = value
         return ret
 
-    def _get_from_schema(self, id):
-        return self.instance.schema.get(id).getAccessor(self.instance)()
+    def _get_from_schema(self, id, schema):
+        return self.instance.getField(id).getAccessor(self.instance)()
 
 
 # actual serializer implementations
@@ -218,15 +233,6 @@ class CollectionSerializer(ATSerializer):
 
 
 class ImageSerializer(Serializer):
-    dimensions = (
-        'large', 'preview', 'mini', 'thumb', 'tile', 'icon', 'listing',
-        'leadimage', 'sidebar', 'summary', 'client')
-    @serializer_for('dimensions')
-    def serialize_dimension_urls(self):
-        return dict(
-            (dim, '%s_%s' % (self.instance.absolute_url(), dim))
-            for dim in self.dimensions)
-
     @serializer_for('width')
     def serialize_width(self):
         return self.instance.width
