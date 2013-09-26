@@ -3,8 +3,10 @@ from OFS.SimpleItem import Item
 from Products.CMFCore.utils import getToolByName
 
 from Products.Archetypes.Field import ReferenceField
+from Products.Archetypes.Widget import RichWidget
 
 import interfaces
+from html import html_to_text
 
 
 # base classes
@@ -157,6 +159,13 @@ class ATSerializer(Serializer):
             if isinstance(field, ReferenceField):
                 value = [
                     ReferenceSerializer(item).to_dict() for item in value]
+            elif isinstance(field.widget, RichWidget):
+                astext = html_to_text(value)
+                return {
+                    'type': 'Rich Text',
+                    'html': value,
+                    'text': astext,
+                }
             elif isinstance(value, Item):
                 serializer = interfaces.ISerializer(value)
                 value = serializer.to_dict(recursive=True)

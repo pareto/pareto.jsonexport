@@ -39,6 +39,7 @@ setup(name='pareto.jsonexport',
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'BeautifulSoup',
       ],
       extras_require={'test': ['plone.app.testing', 'unittest2']},
       test_suite='tests',
