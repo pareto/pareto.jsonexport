@@ -209,6 +209,15 @@ class CollectionSerializer(ATSerializer):
 
 
 class ImageSerializer(Serializer):
+    dimensions = (
+        'large', 'preview', 'mini', 'thumb', 'tile', 'icon', 'listing',
+        'leadimage', 'sidebar', 'summary', 'client')
+    @serializer_for('dimensions')
+    def serialize_dimension_urls(self):
+        return dict(
+            (dim, '%s_%s' % (self.instance.absolute_url(), dim))
+            for dim in self.dimensions)
+
     @serializer_for('width')
     def serialize_width(self):
         return self.instance.width
