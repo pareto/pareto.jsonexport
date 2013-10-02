@@ -10,7 +10,6 @@ from archetypes.schemaextender.extender import instanceSchemaFactory
 import interfaces
 import html
 
-
 # base classes
 def serializer_for(attrId):
     """ decorator to mark methods as serializers for a single field
@@ -38,6 +37,10 @@ class Serializer(object):
 
     def __init__(self, instance):
         self.instance = instance
+        pp = getToolByName(self, 'portal_properties')
+        self.dimensions = [
+            s.split(' ')[0] for s in pp.imaging_properties.allowed_sizes]
+        self.dimensions.insert(0, u'full')
 
     def to_dict(self, recursive=False):
         # we find all of our own methods which are decorated using
@@ -139,6 +142,10 @@ class ATSerializer(Serializer):
         return self.instance.schema.get('description').getEditAccessor(
             self.instance)()
 
+    @serializer_for('path')
+    def serialize_path(self):
+        return self.instance.absolute_url()
+
     @serializer_for('state')
     def serialize_workflow_state(self):
         wft = getToolByName(self.instance, 'portal_workflow')
@@ -149,6 +156,11 @@ class ATSerializer(Serializer):
         if not wfs:
             return None
         return wft.getStatusOf(wfs[0].id, self.instance)['review_state']
+
+    def dimensionize(self, field_id):
+        url = '/'.join([self.instance.absolute_url(), field_id])
+        return dict([(d, ('%s_%s' % (url, d)).rstrip('_full')) 
+                     for d in self.dimensions])
 
     def to_dict(self, *args, **kwargs):
         ret = super(ATSerializer, self).to_dict(*args, **kwargs)
@@ -180,7 +192,14 @@ class ATSerializer(Serializer):
             elif field_id == 'image' and self.instance.portal_type == 'Image':
                 continue
             elif field_id == 'leadImage':
-                value = '%s/leadImage' % (self.instance.absolute_url(),)
+                if value:
+                    value = {
+                        'dimensions': self.dimensionize(field_id),
+                        'width': value.width,
+                        'height': value.height,
+                    }
+                else:
+                    value = ""
             elif hasattr(value, 'blob'):
                 # file or image content, ignore
                 continue
