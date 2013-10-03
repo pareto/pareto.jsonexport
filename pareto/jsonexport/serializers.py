@@ -42,6 +42,10 @@ class Serializer(object):
             s.split(' ')[0] for s in pp.imaging_properties.allowed_sizes]
         self.dimensions.insert(0, u'full')
 
+    @serializer_for('path')
+    def serialize_path(self):
+        return self.instance.absolute_url()
+
     def to_dict(self, recursive=False):
         # we find all of our own methods which are decorated using
         # serializer_for, then we know about the JSON key and know we can call
