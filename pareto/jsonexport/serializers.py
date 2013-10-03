@@ -10,6 +10,15 @@ from archetypes.schemaextender.extender import instanceSchemaFactory
 import interfaces
 import html
 
+try:
+    from pareto.jsonexport.config import BASE_URL, DIMENSIONS 
+except ImportError:  
+    BASE_URL = ''
+    DIMENSIONS = [
+        'full', 'large', 'preview', 'mini', 'thumb', 'tile', 'icon', 'listing', 
+        'leadimage', 'sidebar', 'summary', 'client'
+    ]
+
 # base classes
 def serializer_for(attrId):
     """ decorator to mark methods as serializers for a single field
@@ -37,14 +46,25 @@ class Serializer(object):
 
     def __init__(self, instance):
         self.instance = instance
-        pp = getToolByName(self, 'portal_properties')
-        self.dimensions = [
-            s.split(' ')[0] for s in pp.imaging_properties.allowed_sizes]
-        self.dimensions.insert(0, u'full')
+        if getattr(instance, 'getObject', False):
+            self.instance = instance.getObject()
+        self.portal_url = self.instance.portal_url()
 
-    @serializer_for('path')
-    def serialize_path(self):
-        return self.instance.absolute_url()
+    def clean_path(self, obj):
+        return [x for i, x in enumerate(obj.getPhysicalPath()) if i != 1]
+
+    def clean_url(self, obj):
+        return '/'.join(self.clean_path(obj))
+
+    def url(self, obj):
+        return BASE_URL + self.clean_url(obj)
+
+    def dimensionize(self, obj, field_id=''):
+        url = self.url(obj)
+        if field_id:
+            url = '/'.join([self.url(obj), field_id])
+        return dict([(d, ('%s_%s' % (url, d)).rstrip('_full')) 
+                     for d in DIMENSIONS])
 
     def to_dict(self, recursive=False):
         # we find all of our own methods which are decorated using
@@ -53,7 +73,7 @@ class Serializer(object):
         ret = {
             'type': self.instance.meta_type,
             'id': self.instance.getId(),
-            'path': '/'.join(self.instance.getPhysicalPath()),
+            'path': self.url(self.instance),
         }
         for attrName in dir(self):
             if attrName.startswith('_'):
@@ -82,19 +102,36 @@ class Serializer(object):
                 ret['_children'] = children_data
         return ret
 
+    @serializer_for('path')
+    def serialize_path(self):
+        return self.url(self.instance)
 
-class ReferenceSerializer(Serializer):
+
+class SimpleSerializer(Serializer):
+    """ serialize a simple object
+    """
+    @property
+    def type(self):
+        return 'Simple'
+
+    def to_dict(self, recursive=False):
+        return {
+            'type': self.type,
+            'subtype': self.instance.meta_type,
+            'path': self.url(self.instance),
+            'id': self.instance.getId(),
+        }
+
+
+class ReferenceSerializer(SimpleSerializer):
     """ serialize an object as a reference
 
         used internally for ReferenceFields, etc.
     """
-    def to_dict(self, recursive=False):
-        return {
-            'type': 'Reference',
-            'subtype': self.instance.meta_type,
-            'path': '/'.join(self.instance.getPhysicalPath()),
-            'id': self.instance.getId(),
-        }
+    @property
+    def type(self):
+        return 'Reference'
+
 
 
 class UnknownTypeSerializer(Serializer):
@@ -103,23 +140,9 @@ class UnknownTypeSerializer(Serializer):
         used internally when an object for which there's no serializer
         registered is encountered as child of a serialized object
     """
-    def to_dict(self, recursive=False):
-        return {
-            'type': 'UnknownType',
-            'subtype': self.instance.meta_type,
-            'path': '/'.join(self.instance.getPhysicalPath()),
-            'id': self.instance.getId(),
-        }
-
-
-class ContentListingReference(Serializer):
-    def to_dict(self, recursive=False):
-        return {
-            'type': 'Reference',
-            'subtype': self.instance.meta_type,
-            'path': self.instance.getPath(),
-            'id': self.instance.getId(),
-        }
+    @property
+    def type(self):
+        return 'UnknownType'
 
 
 class ATSerializer(Serializer):
@@ -146,10 +169,6 @@ class ATSerializer(Serializer):
         return self.instance.schema.get('description').getEditAccessor(
             self.instance)()
 
-    @serializer_for('path')
-    def serialize_path(self):
-        return self.instance.absolute_url()
-
     @serializer_for('state')
     def serialize_workflow_state(self):
         wft = getToolByName(self.instance, 'portal_workflow')
@@ -160,11 +179,6 @@ class ATSerializer(Serializer):
         if not wfs:
             return None
         return wft.getStatusOf(wfs[0].id, self.instance)['review_state']
-
-    def dimensionize(self, field_id):
-        url = '/'.join([self.instance.absolute_url(), field_id])
-        return dict([(d, ('%s_%s' % (url, d)).rstrip('_full')) 
-                     for d in self.dimensions])
 
     def to_dict(self, *args, **kwargs):
         ret = super(ATSerializer, self).to_dict(*args, **kwargs)
@@ -182,6 +196,7 @@ class ATSerializer(Serializer):
                 value = [
                     ReferenceSerializer(item).to_dict() for item in value]
             elif isinstance(field.widget, RichWidget):
+                value = value.replace(self.portal_url, BASE_URL)
                 astext = html.html_to_text(value)
                 urls = html.urls_from_html(value)
                 value = {
@@ -198,7 +213,7 @@ class ATSerializer(Serializer):
             elif field_id == 'leadImage':
                 if value:
                     value = {
-                        'dimensions': self.dimensionize(field_id),
+                        'dimensions': self.dimensionize(value, field_id),
                         'width': value.width,
                         'height': value.height,
                     }
@@ -252,10 +267,10 @@ class CollectionSerializer(ATSerializer):
     @serializer_for('results')
     def serialize_items(self):
         items = self.instance.results(batch=False)
-        return [ContentListingReference(item).to_dict() for item in items]
+        return [ReferenceSerializer(item).to_dict() for item in items]
 
 
-class ImageSerializer(Serializer):
+class ImageSerializer(ItemSerializer):
     @serializer_for('width')
     def serialize_width(self):
         return self.instance.width
