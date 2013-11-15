@@ -5,7 +5,7 @@
     xmlns:i18n="http://namespaces.zope.org/i18n"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     xmlns:cmf="http://namespaces.zope.org/cmf"
-    i18n_domain="knmp.siam">
+    i18n_domain="pareto.jsonexport">
 
     <adapter
         factory=".serializers.ItemSerializer"
