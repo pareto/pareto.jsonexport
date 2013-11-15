@@ -11,9 +11,13 @@ import interfaces
 import html
 
 try:
-    from pareto.jsonexport.config import BASE_URL, DIMENSIONS 
+    from pareto.jsonexport.config import BASE_URL 
 except ImportError:  
     BASE_URL = ''
+
+try:
+    from pareto.jsonexport.config import DIMENSIONS 
+except ImportError:  
     DIMENSIONS = [
         'full', 'large', 'preview', 'mini', 'thumb', 'tile', 'icon', 'listing', 
         'leadimage', 'sidebar', 'summary', 'client'
@@ -58,7 +62,7 @@ class Serializer(object):
 
     def url(self, obj):
         return BASE_URL + self.clean_url(obj)
-
+    
     def dimensionize(self, obj, field_id=''):
         url = self.url(obj)
         if field_id:
@@ -156,18 +160,25 @@ class ATSerializer(Serializer):
         fields will be found by looking at the schema (in addition to the
         default behaviour of looking at marked methods)
     """
+
     skip_fields = (
-        'allowDiscussion', 'acquireCriteria', 'constrainTypesMode',
-        'customView', 'customViewFields',
-        'description', 'excludeFromNav', 'immediatelyAddableTypes',
+        'allowDiscussion', 'acquireCriteria', 'constrainTypesMode', 'title', 
+        'description', 'customView', 'customViewFields', 'excludeFromNav',
         'limit', 'limitNumber', 'locallyAllowedTypes', 'nextPreviousEnabled',
         'presentation', 'query', 'sort_on', 'sort_reversed', 'tableContents',
+        'immediatelyAddableTypes',
     )
 
+    def rich_text(self, value):
+        return value
+
+    @serializer_for('title')
+    def serialize_title(self):
+        return self._get_from_schema('title', self.instance.schema) 
+    
     @serializer_for('description')
     def serialize_description(self):
-        return self.instance.schema.get('description').getEditAccessor(
-            self.instance)()
+        return self._get_from_schema('description', self.instance.schema) 
 
     @serializer_for('state')
     def serialize_workflow_state(self):
@@ -182,7 +193,7 @@ class ATSerializer(Serializer):
 
     def to_dict(self, *args, **kwargs):
         ret = super(ATSerializer, self).to_dict(*args, **kwargs)
-        ret['portal_type'] = self.instance.portal_type
+        ret['portal_type'] = portal_type = self.instance.portal_type
         schema = instanceSchemaFactory(self.instance)
         for field_id in schema.keys():
             if field_id in self.skip_fields:
@@ -196,15 +207,7 @@ class ATSerializer(Serializer):
                 value = [
                     ReferenceSerializer(item).to_dict() for item in value]
             elif isinstance(field.widget, RichWidget):
-                value = value.replace(self.portal_url, BASE_URL)
-                astext = html.html_to_text(value)
-                urls = html.urls_from_html(value)
-                value = {
-                    'type': 'Rich Text',
-                    'html': value,
-                    'text': astext,
-                    'urls': urls,
-                }
+                value = self.rich_text(value)
             elif isinstance(value, Item):
                 serializer = interfaces.ISerializer(value)
                 value = serializer.to_dict(recursive=True)
@@ -258,6 +261,7 @@ class FolderSerializer(ItemSerializer):
 
 
 class ATFolderSerializer(ATSerializer):
+
     @serializer_for('_children')
     def serialize_items(self):
         return self.instance.objectIds()
